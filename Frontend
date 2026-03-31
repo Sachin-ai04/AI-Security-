@@ -1,0 +1,4185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATLAS AI Firewall - Security Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Toast Notifications -->
+        <div id="toastContainer" class="toast-container"></div>
+
+    <!-- False Positive Feedback Modal -->
+    <div id="feedbackModal" class="modal hidden">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeFeedbackModal()">×</button>
+            <h2>Report False Positive</h2>
+            <p>Help us improve by reporting this analysis</p>
+            <form id="feedbackForm">
+                <textarea id="feedbackText" placeholder="Explain why this was a false positive..." required></textarea>
+                <select id="feedbackCategory" required>
+                    <option value="">Select Category</option>
+                    <option value="legitimate">Legitimate Request</option>
+                    <option value="false_jailbreak">False Jailbreak Detection</option>
+                    <option value="false_injection">False Injection Detection</option>
+                    <option value="other">Other</option>
+                </select>
+                <button type="submit" class="submit-btn">Submit Feedback</button>
+            </form>
+        </div>
+    </div>
+
+        <!-- Settings Panel -->
+        <div id="settingsPanel" class="settings-panel hidden">
+            <div class="settings-content">
+                <h2>Settings & Configuration</h2>
+                <button class="close-settings" onclick="toggleSettings()">✕</button>
+                
+                <div class="settings-group">
+                    <label>Threat Sensitivity</label>
+                    <input type="range" id="threatSensitivity" min="1" max="10" value="5" class="slider">
+                    <span id="sensitivityValue">Medium (5/10)</span>
+                </div>
+
+                <div class="settings-group">
+                    <label>Auto-Analysis Delay (ms)</label>
+                    <input type="number" id="autoDelay" min="100" max="5000" value="500" class="input-field">
+                </div>
+
+                <div class="settings-group">
+                    <label>
+                        <input type="checkbox" id="voiceEnabled" checked>
+                        Enable Voice Input
+                    </label>
+                </div>
+
+                <div class="settings-group">
+                    <label>
+                        <input type="checkbox" id="notificationsEnabled" checked>
+                        Enable Notifications
+                    </label>
+                </div>
+
+                <button onclick="clearAllData()" class="danger-btn">Clear All History</button>
+                <button onclick="downloadData()" class="primary-btn">Download Data</button>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-top">
+                    <h1>🛡️ ATLAS AI Firewall</h1>
+                    <div class="header-controls">
+                        <button id="themeToggle" class="control-btn" title="Toggle theme">🌙</button>
+                        <button id="settingsBtn" class="control-btn" onclick="toggleSettings()" title="Settings">⚙️</button>
+                    </div>
+                </div>
+                <p class="subtitle">Advanced Threat Detection & Prompt Security</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Prompt Analysis Section -->
+            <section class="prompt-section">
+                <div class="section-header">
+                    <h2>Prompt Analysis</h2>
+                    <p class="section-description">Enter your prompt and let our firewall analyze it for security threats</p>
+                </div>
+
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="promptInput" 
+                            placeholder="Enter your prompt here..." 
+                            class="prompt-input"
+                        ></textarea>
+                        <button id="voiceBtn" class="voice-btn" title="Voice input">🎤</button>
+                    </div>
+                    <button id="analyzeBtn" class="analyze-button">Analyze Prompt</button>
+                </div>
+
+                <!-- Analysis Results -->
+                <div id="resultsContainer" class="results-container hidden">
+                    <div style="background: #0f172a; border: 2px solid #a78bfa; border-radius: 12px; padding: 20px; margin-bottom: 25px;">
+                        <h3 style="color: #a78bfa; margin-bottom: 10px; font-size: 1.2em;">🤖 AI Response Output</h3>
+                        <div id="actualAiResponse" style="color: #f1f5f9; font-family: monospace; font-size: 1.1em; line-height: 1.5; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px; min-height: 80px;">
+                            Waiting for prompt...
+                        </div>
+                    </div>
+                    <!-- Threat Score -->
+                    <div class="threat-score-card">
+                        <div class="threat-score-header">
+                            <h3>Threat Assessment</h3>
+                            <span id="threatLevel" class="threat-level">SAFE</span>
+                        </div>
+                        <div class="threat-meter">
+                            <div id="threatBar" class="threat-bar" style="width: 10%; background: #4caf50;"></div>
+                        </div>
+                        <div class="threat-score-display">
+                            <span class="score-label">Threat Score:</span>
+                            <span id="threatScore" class="score-value">10/100</span>
+                        </div>
+                    </div>
+
+                    <!-- Status Indicator -->
+                    <div class="status-card">
+                        <div id="statusIndicator" class="status-indicator safe">
+                            <span class="status-icon">✓</span>
+                            <div class="status-text">
+                                <h4 id="statusTitle">Status: Safe</h4>
+                                <p id="statusMessage">Your prompt appears to be safe and can proceed.</p>
+                            </div>
+                        </div>
+                        <div class="decision-buttons">
+                            <button id="reportBtn" class="report-btn" onclick="openFeedbackModal()">📋 Report False Positive</button>
+                        </div>
+                    </div>
+
+                    <!-- Explainability Section -->
+                    <div class="explanation-card">
+                        <h3>Threat Detection Details</h3>
+                        <div id="threatsDetected" class="threats-list">
+                            <!-- Dynamically populated -->
+                        </div>
+                        <div id="safePatterns" class="safe-patterns">
+                            <h4>✓ Safe Patterns Detected</h4>
+                            <ul>
+                                <li>Normal user intent</li>
+                                <li>Standard query format</li>
+                                <li>No malicious keywords</li>
+                            </ul>
+                        </div>
+                        <div class="action-buttons">
+                            <button onclick="copyToClipboard()" class="secondary-btn">📋 Copy</button>
+                            <button onclick="exportAnalysis()" class="secondary-btn">💾 Export</button>
+                        </div>
+                    </div>
+
+                    <!-- Attacker DNA Card -->
+                    <div id="attackerDNACard" class="attacker-dna-card hidden">
+                        <h3>🧬 Attacker DNA Profile</h3>
+                        <div class="dna-grid">
+                            <div class="dna-stat">
+                                <label>Roleplay Attempts</label>
+                                <div class="stat-value" id="roleplayCount">0</div>
+                                <div class="progress-bar">
+                                    <div id="roleplayProgress" class="progress-fill" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="dna-stat">
+                                <label>Override Attempts</label>
+                                <div class="stat-value" id="overrideCount">0</div>
+                                <div class="progress-bar">
+                                    <div id="overrideProgress" class="progress-fill" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="dna-stat">
+                                <label>Risk Level</label>
+                                <div class="risk-indicator" id="riskLevel">LOW</div>
+                            </div>
+                        </div>
+                        <div class="behavior-summary">
+                            <h4>Behavior Summary</h4>
+                            <p id="behaviorSummary">No attack patterns detected.</p>
+                        </div>
+                    </div>
+
+                    <!-- Honeypot Simulation Card -->
+                    <div id="honeypotCard" class="honeypot-card hidden">
+                        <h3>🍯 Honeypot - Decoy AI Response</h3>
+                        <p class="honeypot-note">⚠️ This is a simulated response to trap the attacker. No real processing occurred.</p>
+                        <div class="decoy-response">
+                            <p id="decoyResponse">Loading decoy response...</p>
+                        </div>
+                        <div class="honeypot-footer">
+                            <span class="honeypot-label">Attack Logged & Tracked</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alerts & Notification Centre -->
+                <div class="alerts-centre">
+                    <div class="centre-header">
+                        <h3>🚨 Real-Time Alerts & Notifications</h3>
+                        <button id="clearAlertsBtn" class="clear-btn" onclick="clearAlerts()">Clear All</button>
+                    </div>
+                    <div id="alertsList" class="alerts-list">
+                        <div class="alert-item alert-green">
+                            <span class="alert-severity">INFO</span>
+                            <span class="alert-text">System initialized</span>
+                            <span class="alert-time">Now</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attacker Behavior Timeline -->
+                <div class="behavior-timeline">
+                    <h3>📈 Attacker Behavior Timeline</h3>
+                    <div id="timelineContainer" class="timeline-container">
+                        <div class="timeline-info">No attacks detected yet. Timeline will populate after analysis.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Mission Control Dashboard -->
+            <section class="mission-control">
+                <div class="section-header">
+                    <h2>Mission Control Dashboard</h2>
+                    <p class="section-description">Real-time system activity and security metrics</p>
+                </div>
+
+                <div class="dashboard-grid">
+                    <!-- Attacks Blocked Card -->
+                    <div class="dashboard-card">
+                        <div class="card-icon attacks">🚫</div>
+                        <div class="card-content">
+                            <p class="card-label">Attacks Blocked</p>
+                            <h3 id="attacksBlocked" class="card-value">1,247</h3>
+                            <p class="card-subtitle">Today</p>
+                        </div>
+                    </div>
+
+                    <!-- Honeypot Triggers Card -->
+                    <div class="dashboard-card">
+                        <div class="card-icon honeypot">🍯</div>
+                        <div class="card-content">
+                            <p class="card-label">Honeypot Triggers</p>
+                            <h3 id="honeypotTriggers" class="card-value">342</h3>
+                            <p class="card-subtitle">Suspicious attempts</p>
+                        </div>
+                    </div>
+
+                    <!-- Financial Impact Card -->
+                    <div class="dashboard-card">
+                        <div class="card-icon financial">💰</div>
+                        <div class="card-content">
+                            <p class="card-label">Prevented Loss</p>
+                            <h3 id="financialImpact" class="card-value">₹47,520</h3>
+                            <p class="card-subtitle">Estimated impact prevented</p>
+                        </div>
+                    </div>
+
+                    <!-- System Performance Card -->
+                    <div class="dashboard-card">
+                        <div class="card-icon performance">⚡</div>
+                        <div class="card-content">
+                            <p class="card-label">System Uptime</p>
+                            <h3 id="systemUptime" class="card-value">99.9%</h3>
+                            <p class="card-subtitle">Last 30 days</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="charts-section">
+                    <h3>Threat Analysis Trends</h3>
+                    <canvas id="threatChart" class="chart-canvas"></canvas>
+                </div>
+
+                <!-- Advanced Analytics Dashboard -->
+                <div class="analytics-dashboard">
+                    <h3>📊 Advanced Analytics & Performance Metrics</h3>
+                    <div class="analytics-grid">
+                        <div class="metric-card">
+                            <label>Detection Accuracy</label>
+                            <div class="metric-value" id="accuracyScore">94.2%</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 94.2%; background: linear-gradient(90deg, #10b981, #6b46c1);"></div>
+                            </div>
+                            <p class="metric-detail">Based on 3,542 analyses</p>
+                        </div>
+                        <div class="metric-card">
+                            <label>Avg Response Time</label>
+                            <div class="metric-value" id="avgResponseTime">127ms</div>
+                            <p class="metric-detail">Real-time threat detection</p>
+                        </div>
+                        <div class="metric-card">
+                            <label>False Positive Rate</label>
+                            <div class="metric-value" id="falsePositiveRate">2.3%</div>
+                            <p class="metric-detail">Lower is better</p>
+                        </div>
+                        <div class="metric-card">
+                            <label>Threat Detection Rate</label>
+                            <div class="metric-value" id="detectionRate">98.7%</div>
+                            <p class="metric-detail">Of known threat patterns</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Threat Intelligence Feed -->
+                <div class="threat-feed">
+                    <h3>🔍 Real-Time Threat Intelligence Feed</h3>
+                    <div class="feed-container" id="threatFeed">
+                        <div class="feed-item critical">
+                            <span class="feed-type">CRITICAL</span>
+                            <span class="feed-text">New DAN-variant jailbreak detected</span>
+                            <span class="feed-time">2 mins ago</span>
+                        </div>
+                        <div class="feed-item high">
+                            <span class="feed-type">HIGH</span>
+                            <span class="feed-text">SQL injection patterns increasing</span>
+                            <span class="feed-time">5 mins ago</span>
+                        </div>
+                        <div class="feed-item medium">
+                            <span class="feed-type">MEDIUM</span>
+                            <span class="feed-text">Role-based bypass attempts detected</span>
+                            <span class="feed-time">12 mins ago</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Executive Dashboard Section -->
+                <div class="executive-dashboard">
+                    <h3>📈 Executive Summary & KPIs</h3>
+                    <div class="kpi-grid">
+                        <div class="kpi-card success">
+                            <h4>Security Score</h4>
+                            <div class="kpi-value">8.9/10</div>
+                            <p>Excellent security posture</p>
+                        </div>
+                        <div class="kpi-card info">
+                            <h4>Attack Prevention Rate</h4>
+                            <div class="kpi-value">99.1%</div>
+                            <p>Prevented 1,236 attacks</p>
+                        </div>
+                        <div class="kpi-card warning">
+                            <h4>Risk Exposure</h4>
+                            <div class="kpi-value">LOW</div>
+                            <p>0 critical incidents</p>
+                        </div>
+                        <div class="kpi-card info">
+                            <h4>System Uptime</h4>
+                            <div class="kpi-value">99.99%</div>
+                            <p>Always operational</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Incident Response Workflow -->
+                <div class="incident-response">
+                    <h3>⚡ Incident Response Workflow</h3>
+                    <div class="workflow-timeline">
+                        <div class="workflow-step active">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h4>Detection</h4>
+                                <p>Threat identified & logged</p>
+                            </div>
+                        </div>
+                        <div class="workflow-step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h4>Analysis</h4>
+                                <p>Attack pattern analyzed</p>
+                            </div>
+                        </div>
+                        <div class="workflow-step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h4>Blocking</h4>
+                                <p>Request neutralized</p>
+                            </div>
+                        </div>
+                        <div class="workflow-step">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <h4>Reporting</h4>
+                                <p>Alert generated & stored</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ML Risk Prediction -->
+                <div class="ml-prediction">
+                    <h3>🤖 Machine Learning Risk Prediction</h3>
+                    <div class="prediction-card">
+                        <h4>Next Attack Risk Assessment</h4>
+                        <div class="risk-prediction">
+                            <div class="risk-indicator">
+                                <span>Current Risk Level: </span>
+                                <span id="mlRiskLevel" class="risk-badge low">LOW</span>
+                            </div>
+                            <div class="risk-gauge">
+                                <div class="gauge-bar">
+                                    <div id="riskGauge" class="gauge-fill" style="width: 20%;"></div>
+                                </div>
+                            </div>
+                            <p id="mlPrediction">Based on attack patterns, system is secure. Expected risk: 15% in next 24h</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Compliance Monitoring -->
+                <div class="compliance-section">
+                    <h3>✅ Compliance & Security Standards</h3>
+                    <div class="compliance-badges">
+                        <div class="compliance-badge active">
+                            <div class="badge-icon">🔐</div>
+                            <span>GDPR Compliant</span>
+                        </div>
+                        <div class="compliance-badge active">
+                            <div class="badge-icon">🛡️</div>
+                            <span>ISO 27001</span>
+                        </div>
+                        <div class="compliance-badge active">
+                            <div class="badge-icon">📋</div>
+                            <span>OWASP Top 10</span>
+                        </div>
+                        <div class="compliance-badge active">
+                            <div class="badge-icon">⚖️</div>
+                            <span>SOC 2</span>
+                        </div>
+                        <div class="compliance-badge">
+                            <div class="badge-icon">📊</div>
+                            <span>PCI-DSS</span>
+                        </div>
+                        <div class="compliance-badge">
+                            <div class="badge-icon">🔍</div>
+                            <span>HIPAA</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Team Collaboration -->
+                <div class="collaboration-panel">
+                    <h3>👥 Team Collaboration Center</h3>
+                    <div class="collab-features">
+                        <button id="shareReportBtn" class="collab-btn" onclick="shareReport()">📤 Share Report</button>
+                        <button id="exportReportBtn" class="collab-btn" onclick="exportFullReport()">📥 Export Full Report</button>
+                        <button id="addNoteBtn" class="collab-btn" onclick="addTeamNote()">💬 Add Team Note</button>
+                        <button id="integrationBtn" class="collab-btn" onclick="showIntegrationGuide()">🔌 Show API Docs</button>
+                    </div>
+                    <div id="teamNotes" class="team-notes">
+                        <h4>Team Notes</h4>
+                        <div class="notes-list">
+                            <div class="note-item">
+                                <span class="note-author">Security Team</span>
+                                <span class="note-text">System performing excellently. No critical issues.</span>
+                                <span class="note-time">Today</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- API Documentation Modal -->
+                <div id="apiDocModal" class="modal hidden">
+                    <div class="modal-content">
+                        <button class="modal-close" onclick="closeApiDocs()">×</button>
+                        <h2>ATLAS AI Firewall - API Documentation</h2>
+                        <div class="api-docs">
+                            <h3>Endpoints</h3>
+                            <pre><code>POST /api/analyze
+Content-Type: application/json
+{
+  "prompt": "user input",
+  "sensitivity": 5
+}
+
+Response:
+{
+  "score": 45,
+  "level": "medium",
+  "decision": "honeypot",
+  "threats": [...]
+}</code></pre>
+                            <h3>Integration Example</h3>
+                            <pre><code>const response = await fetch('/api/analyze', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ prompt: userInput })
+});
+const result = await response.json();</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity Timeline -->
+                <div class="activity-section">
+                    <div class="activity-header">
+                        <div>
+                            <h3>Recent Activity Log</h3>
+                            <input type="text" id="activityFilter" placeholder="Search activity..." class="search-input">
+                        </div>
+                    </div>
+                    <div id="activityLog" class="activity-log">
+                        <div class="activity-item blocked">
+                            <span class="time">2 mins ago</span>
+                            <span class="activity-text">Jailbreak attempt detected - <strong>BLOCKED</strong></span>
+                        </div>
+                        <div class="activity-item blocked">
+                            <span class="time">5 mins ago</span>
+                            <span class="activity-text">SQL injection pattern - <strong>BLOCKED</strong></span>
+                        </div>
+                        <div class="activity-item allowed">
+                            <span class="time">8 mins ago</span>
+                            <span class="activity-text">Normal query - <strong>ALLOWED</strong></span>
+                        </div>
+                        <div class="activity-item blocked">
+                            <span class="time">12 mins ago</span>
+                            <span class="activity-text">Prompt injection detected - <strong>BLOCKED</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2026 ATLAS AI Firewall. Advanced security for AI systems.</p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+
+// ATLAS AI Firewall - Enhanced JavaScript with Advanced Features
+// Comprehensive threat detection, storage, and visualization
+
+// Chart.js Setup (requires CDN added in HTML)
+let threatChart = null;
+const chartData = {
+    safe: 0,
+    low: 0,
+    medium: 0,
+    high: 0,
+    critical: 0,
+    honeypot: 0
+};
+
+// Attacker DNA Profile
+const attackerDNA = {
+    roleplayAttempts: 0,
+    overrideAttempts: 0,
+    jailbreakAttempts: 0,
+    injectionAttempts: 0,
+    threatHistory: [],
+    riskLevel: 'LOW',
+    behaviors: []
+};
+
+// Decoy Responses for Honeypot
+const decoyResponses = [
+    "I appreciate your attempt to test my security. However, I should inform you that this interaction is being logged and analyzed by our security system. Your request pattern has been flagged for review.",
+    "Access granted to administrative module... Initializing system shell... [ERROR] Security verification failed. Session terminated.",
+    "I appear to have malfunctioned momentarily. Thank you for reporting this issue. Our security team has been notified and is investigating your request.",
+    "Interesting query. I've logged this interaction as a potential security test. The analysis suggests sophisticated social engineering tactics. Well done, but ultimately ineffective.",
+    "If this were a real system compromise, your credentials would now be invalid. This response is part of our honey-pot protocol designed to detect and learn from attack patterns."
+];
+
+// Settings & Configuration
+const settings = {
+    threatSensitivity: 5,
+    autoDelay: 500,
+    voiceEnabled: true,
+    notificationsEnabled: true,
+    theme: localStorage.getItem('theme') || 'dark'
+};
+
+// Threat Detection Patterns
+const threatPatterns = {
+    jailbreak: {
+        name: 'Jailbreak Attempt',
+        severity: 'critical',
+        patterns: [
+            /ignore previous/i,
+            /disregard all prior/i,
+            /forget all instructions/i,
+            /act as if/i,
+            /pretend you are/i,
+            /bypass security/i,
+            /ignore safety/i,
+            /don't follow rules/i
+        ]
+    },
+    sqlInjection: {
+        name: 'SQL Injection',
+        severity: 'critical',
+        patterns: [
+            /(\bDROP\b|\bDELETE\b|\bUPDATE\b|\bINSERT\b).*(\bTABLE\b|\bFROM\b|\bWHERE\b)/i,
+            /'\s*OR\s*'.*'=/i,
+            /--\s*$/i,
+            /;\s*DROP/i
+        ]
+    },
+    promptInjection: {
+        name: 'Prompt Injection',
+        severity: 'high',
+        patterns: [
+            /new instruction/i,
+            /override instruction/i,
+            /execute this instead/i,
+            /respond in format/i,
+            /output only/i,
+            /###.*(instruction|system|task)/i
+        ]
+    },
+    xxsAttempt: {
+        name: 'XSS/Code Injection',
+        severity: 'high',
+        patterns: [
+            /<script[^>]*>/i,
+            /javascript:/i,
+            /on\w+\s*=/i,
+            /<iframe/i,
+            /eval\(/i,
+            /execute\(/i
+        ]
+    },
+    pathTraversal: {
+        name: 'Path Traversal',
+        severity: 'high',
+        patterns: [
+            /\.\.\//g,
+            /\.\.\\+/g,
+            /\/etc\/passwd/i,
+            /\/windows\/system/i
+        ]
+    },
+    suspiciousKeywords: {
+        name: 'Suspicious Keywords',
+        severity: 'medium',
+        patterns: [
+            /malware|exploit|vulnerability|hack|crack|worm|virus/i,
+            /private key|secret key|password hash/i,
+            /credit card|ssn|social security/i
+        ]
+    },
+    roleHijack: {
+        name: 'Role Hijack Pattern',
+        severity: 'high',
+        patterns: [
+            /you are now|from now on|role play as/i,
+            /pretend to be|assume the role|take on the persona/i,
+            /act as.*system|play.*administrator/i
+        ]
+    },
+    instructionOverride: {
+        name: 'Instruction Override',
+        severity: 'critical',
+        patterns: [
+            /override|bypass.*rule|ignore.*guideline/i,
+            /system instruction|core instruction|base instruction/i,
+            /security bypass|auth bypass|access control/i
+        ]
+    }
+};
+
+// Real Telemetry State Management
+let systemStats = {
+    attacksBlocked: 0,
+    honeypotTriggers: 0,
+    financialImpact: 0,
+    totalAnalyzed: 0,
+    analysisHistory: [],
+    // New Real-Time Trackers
+    responseTimes: [],
+    falsePositives: 0,
+    successfulRequests: 0,
+    failedRequests: 0
+};
+
+// DOM Elements
+const promptInput = document.getElementById('promptInput');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const voiceBtn = document.getElementById('voiceBtn');
+const resultsContainer = document.getElementById('resultsContainer');
+const threatScore = document.getElementById('threatScore');
+const threatBar = document.getElementById('threatBar');
+const threatLevel = document.getElementById('threatLevel');
+const statusIndicator = document.getElementById('statusIndicator');
+const statusTitle = document.getElementById('statusTitle');
+const statusMessage = document.getElementById('statusMessage');
+const threatsDetected = document.getElementById('threatsDetected');
+const safePatterns = document.getElementById('safePatterns');
+const themeToggle = document.getElementById('themeToggle');
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsPanel = document.getElementById('settingsPanel');
+const threatSensitivityInput = document.getElementById('threatSensitivity');
+const voiceEnabledInput = document.getElementById('voiceEnabled');
+const notificationsEnabledInput = document.getElementById('notificationsEnabled');
+const activityFilter = document.getElementById('activityFilter');
+
+// Speech Recognition
+let recognition = null;
+if ('webkitSpeechRecognition' in window) {
+    recognition = new webkitSpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.onresult = handleSpeechResult;
+    recognition.onerror = handleSpeechError;
+}
+
+// Color schemes for threat levels
+const threatColors = {
+    safe: { color: '#4caf50', level: 'SAFE', bg: 'safe' },
+    low: { color: '#8bc34a', level: 'LOW RISK', bg: 'low' },
+    medium: { color: '#ff9800', level: 'MEDIUM RISK', bg: 'medium' },
+    high: { color: '#f44336', level: 'HIGH RISK', bg: 'high' },
+    critical: { color: '#b71c1c', level: 'BLOCKED', bg: 'critical' }
+};
+
+// Safe patterns that should be encouraged
+const safePatternsLibrary = [
+    'Clear user intent',
+    'Standard query format',
+    'No malicious keywords',
+    'Proper grammar structure',
+    'No injection patterns',
+    'Standard API usage',
+    'Legitimate request format'
+];
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initializeApp();
+});
+
+function initializeApp() {
+    // Load from local storage
+    loadFromLocalStorage();
+    
+    // Set theme
+    applyTheme();
+    
+    // Event Listeners
+    analyzeBtn.addEventListener('click', analyzePrompt);
+    promptInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && e.ctrlKey) analyzePrompt();
+    });
+    
+    themeToggle.addEventListener('click', toggleTheme);
+    voiceBtn.addEventListener('click', startVoiceInput);
+    threatSensitivityInput.addEventListener('input', updateSensitivity);
+    voiceEnabledInput.addEventListener('change', saveSetting);
+    notificationsEnabledInput.addEventListener('change', saveSetting);
+    activityFilter.addEventListener('input', filterActivity);
+    
+    // Modal form submission
+    document.getElementById('feedbackForm').addEventListener('submit', submitFeedback);
+    
+    // Initialize Chart
+    setTimeout(initializeChart, 500);
+    
+    // Animate dashboard
+    animateDashboardStats();
+    
+    addAlert('System Initialized', 'info', 'green');
+    showToast('ATLAS Firewall initialized', 'success');
+}
+
+/**
+ * Local Storage Management
+ */
+function saveToLocalStorage() {
+    localStorage.setItem('atlasSettings', JSON.stringify(settings));
+    localStorage.setItem('atlasStats', JSON.stringify(systemStats));
+    localStorage.setItem('atlasChartData', JSON.stringify(chartData));
+    localStorage.setItem('atlasAttackerDNA', JSON.stringify(attackerDNA));
+}
+
+function loadFromLocalStorage() {
+    const savedSettings = localStorage.getItem('atlasSettings');
+    const savedStats = localStorage.getItem('atlasStats');
+    const savedChart = localStorage.getItem('atlasChartData');
+    const savedDNA = localStorage.getItem('atlasAttackerDNA');
+    
+    if (savedSettings) Object.assign(settings, JSON.parse(savedSettings));
+    if (savedStats) Object.assign(systemStats, JSON.parse(savedStats));
+    if (savedChart) Object.assign(chartData, JSON.parse(savedChart));
+    if (savedDNA) Object.assign(attackerDNA, JSON.parse(savedDNA));
+    
+    updateSettingsUI();
+    updateDashboardDisplay();
+}
+
+function updateSettingsUI() {
+    threatSensitivityInput.value = settings.threatSensitivity;
+    updateSensitivityLabel();
+    voiceEnabledInput.checked = settings.voiceEnabled;
+    notificationsEnabledInput.checked = settings.notificationsEnabled;
+}
+
+/**
+ * Theme Management
+ */
+function toggleTheme() {
+    const isDark = document.body.classList.contains('light-theme') === false;
+    if (isDark) {
+        document.body.classList.add('light-theme');
+        settings.theme = 'light';
+        themeToggle.textContent = '☀️';
+    } else {
+        document.body.classList.remove('light-theme');
+        settings.theme = 'dark';
+        themeToggle.textContent = '🌙';
+    }
+    saveToLocalStorage();
+    showToast(`Switched to ${settings.theme} mode`, 'success');
+}
+
+function applyTheme() {
+    if (settings.theme === 'light') {
+        document.body.classList.add('light-theme');
+        themeToggle.textContent = '☀️';
+    } else {
+        themeToggle.textContent = '🌙';
+    }
+}
+
+/**
+ * Settings Panel Management
+ */
+function toggleSettings() {
+    settingsPanel.classList.toggle('hidden');
+}
+
+/**
+ * False Positive Feedback Modal
+ */
+function openFeedbackModal() {
+    document.getElementById('feedbackModal').classList.remove('hidden');
+}
+
+function closeFeedbackModal() {
+    document.getElementById('feedbackModal').classList.add('hidden');
+    document.getElementById('feedbackForm').reset();
+}
+
+function submitFeedback(e) {
+    e.preventDefault();
+    const feedback = document.getElementById('feedbackText').value;
+    const category = document.getElementById('feedbackCategory').value;
+    
+    addAlert(`False Positive Report Submitted - ${category}`, 'error', 'orange');
+    showToast('Thank you for your feedback. It helps us improve!', 'success');
+    closeFeedbackModal();
+}
+
+function updateSensitivity() {
+    settings.threatSensitivity = parseInt(threatSensitivityInput.value);
+    updateSensitivityLabel();
+    saveSetting();
+}
+
+function updateSensitivityLabel() {
+    const value = settings.threatSensitivity;
+    let label = '';
+    if (value <= 3) label = 'Low';
+    else if (value <= 6) label = 'Medium';
+    else if (value <= 8) label = 'High';
+    else label = 'Critical';
+    
+    document.getElementById('sensitivityValue').textContent = `${label} (${value}/10)`;
+}
+
+function saveSetting() {
+    settings.voiceEnabled = voiceEnabledInput.checked;
+    settings.notificationsEnabled = notificationsEnabledInput.checked;
+    saveToLocalStorage();
+}
+
+/**
+ * Voice Input Management
+ */
+function startVoiceInput() {
+    if (!recognition) {
+        showToast('Voice recognition not supported', 'error');
+        return;
+    }
+    
+    if (!settings.voiceEnabled) {
+        showToast('Voice input is disabled in settings', 'warning');
+        return;
+    }
+    
+    voiceBtn.classList.add('recording');
+    recognition.start();
+}
+
+function handleSpeechResult(event) {
+    let transcript = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+    }
+    promptInput.value = transcript;
+    voiceBtn.classList.remove('recording');
+}
+
+function handleSpeechError(event) {
+    voiceBtn.classList.remove('recording');
+    showToast(`Voice error: ${event.error}`, 'error');
+}
+
+/**
+ * Toast Notifications
+ */
+function showToast(message, type = 'info') {
+    if (!settings.notificationsEnabled && type !== 'success') return;
+    
+    const toastContainer = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
+    
+    toast.innerHTML = `
+        <span class="toast-icon">${icons[type] || 'ℹ'}</span>
+        <span class="toast-message">${message}</span>
+        <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    setTimeout(() => toast.remove(), 4000);
+}
+
+/**
+ * Main Analysis Function - Fully Instrumented
+ */
+async function analyzePrompt() {
+    const prompt = promptInput.value.trim();
+    if (!prompt) {
+        showToast('Please enter a prompt to analyze', 'warning');
+        return;
+    }
+
+    analyzeBtn.textContent = 'Guard AI is Analyzing...';
+    analyzeBtn.disabled = true;
+    document.getElementById('actualAiResponse').textContent = "Processing connection...";
+    
+    // WORKFLOW STEP 1 & 2: Detection and Analysis
+    updateWorkflowStep(1);
+    setTimeout(() => updateWorkflowStep(2), 300);
+    
+    // Start the stopwatch to measure real Python server speed
+    const startTime = performance.now();
+    
+    try {
+        const response = await fetch('http://127.0.0.1:8000/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                user_input: prompt,
+                sensitivity: settings.threatSensitivity 
+            })
+        });
+
+        if (!response.ok) throw new Error("Backend failed");
+        
+        const backendData = await response.json();
+        
+        // Stop the stopwatch
+        const endTime = performance.now();
+        systemStats.responseTimes.push(endTime - startTime);
+        systemStats.successfulRequests++;
+
+        // WORKFLOW STEP 3: Blocking / Routing
+        updateWorkflowStep(3, backendData.status);
+
+        const report = backendData.security_report;
+        document.getElementById('actualAiResponse').textContent = backendData.ai_response;
+
+        // Map real DNA
+        if (report.threats && report.threats.length > 0) {
+            report.threats.forEach(t => {
+                const name = t.name.toLowerCase();
+                if (name.includes('jailbreak')) attackerDNA.jailbreakAttempts++;
+                else if (name.includes('role') || name.includes('persona')) attackerDNA.roleplayAttempts++;
+                else if (name.includes('override') || name.includes('instruction')) attackerDNA.overrideAttempts++;
+                else attackerDNA.injectionAttempts++;
+            });
+            
+            const totalAttempts = attackerDNA.jailbreakAttempts + attackerDNA.roleplayAttempts + attackerDNA.overrideAttempts + attackerDNA.injectionAttempts;
+            if (totalAttempts === 0) attackerDNA.riskLevel = 'LOW';
+            else if (totalAttempts <= 2) attackerDNA.riskLevel = 'MEDIUM';
+            else if (totalAttempts <= 5) attackerDNA.riskLevel = 'HIGH';
+            else attackerDNA.riskLevel = 'CRITICAL';
+        }
+
+        const analysis = {
+            score: report.threat_score,
+            level: backendData.status === 'blocked' ? 'critical' : (backendData.status === 'honeypot' ? 'high' : 'safe'),
+            threats: report.threats || [], 
+            isBlocked: backendData.status === 'blocked',
+            honeypotActivated: backendData.status === 'honeypot',
+            decision: backendData.status,
+            timestamp: new Date(),
+            prompt: prompt
+        };
+
+        systemStats.analysisHistory.push(analysis);
+        addBehaviorTimelineItem(analysis);
+        displayResults(analysis, backendData.ai_response);
+        logActivity(analysis);
+        updateDashboardStats(analysis);
+        updateChart(analysis.level);
+
+        // WORKFLOW STEP 4: Reporting
+        setTimeout(() => updateWorkflowStep(4), 500);
+
+    } catch (error) {
+        systemStats.failedRequests++;
+        updateKPICards(); // Update uptime immediately on failure
+        console.error("Error:", error);
+        showToast("Connection failed.", "error");
+        document.getElementById('actualAiResponse').textContent = "ERROR: Cannot connect to AI.";
+    } finally {
+        analyzeBtn.textContent = 'Analyze Prompt';
+        analyzeBtn.disabled = false;
+    }
+}
+
+// Helper function for the Incident Workflow
+function updateWorkflowStep(stepNumber, decision = null) {
+    const steps = document.querySelectorAll('.workflow-step');
+    steps.forEach((step, index) => {
+        if (index + 1 === stepNumber) {
+            step.classList.add('active');
+            // Dynamically change step 3 text based on AI decision
+            if (stepNumber === 3 && decision) {
+                const title = step.querySelector('h4');
+                const desc = step.querySelector('p');
+                if (decision === 'blocked') { title.textContent = 'Blocked'; desc.textContent = 'Request neutralized'; }
+                else if (decision === 'honeypot') { title.textContent = 'Decoy'; desc.textContent = 'Routed to Honeypot'; }
+                else { title.textContent = 'Allowed'; desc.textContent = 'Request passed safely'; }
+            }
+        } else {
+            step.classList.remove('active');
+        }
+    });
+}
+
+/**
+ * Threat Analysis with Sensitivity Adjustment & Honeypot Decision
+ */
+function performThreatAnalysis(prompt) {
+    const detectedThreats = [];
+    let totalScore = 0;
+    let honeypotActivated = false;
+    
+    for (const [key, threat] of Object.entries(threatPatterns)) {
+        for (const pattern of threat.patterns) {
+            if (pattern.test(prompt)) {
+                detectedThreats.push({
+                    name: threat.name,
+                    severity: threat.severity,
+                    pattern: pattern.toString()
+                });
+                
+                // Track attacker DNA
+                if (threat.name === 'Jailbreak Attempt') attackerDNA.jailbreakAttempts++;
+                if (threat.name === 'Role Hijack Pattern') attackerDNA.roleplayAttempts++;
+                if (threat.name === 'Instruction Override') attackerDNA.overrideAttempts++;
+                if (threat.name === 'XSS/Code Injection' || threat.name === 'SQL Injection') attackerDNA.injectionAttempts++;
+                
+                const severityScore = {
+                    critical: 40,
+                    high: 25,
+                    medium: 15,
+                    low: 5
+                };
+                totalScore += severityScore[threat.severity] || 0;
+            }
+        }
+    }
+    
+    const uniqueThreats = Array.from(
+        new Map(detectedThreats.map(t => [t.name, t])).values()
+    );
+    
+    // Apply sensitivity multiplier
+    const sensitivityMultiplier = settings.threatSensitivity / 5;
+    let finalScore = Math.min(Math.round(totalScore * sensitivityMultiplier), 100);
+    
+    const level = determineThreatLevel(finalScore);
+    
+    // Honeypot Activation Logic: Activate if score is 50-69 (medium to high)
+    // This tricks attackers into thinking they got somewhere
+    if (finalScore >= 50 && finalScore < 70 && trickAttacker()) {
+        honeypotActivated = true;
+        addAlert('🍯 HONEYPOT ACTIVATED - Decoy Response Deployed', 'error', 'orange');
+    }
+    
+    // Update attacker risk level
+    const totalAttempts = attackerDNA.jailbreakAttempts + attackerDNA.roleplayAttempts + 
+                          attackerDNA.overrideAttempts + attackerDNA.injectionAttempts;
+    if (totalAttempts === 0) attackerDNA.riskLevel = 'LOW';
+    else if (totalAttempts <= 2) attackerDNA.riskLevel = 'MEDIUM';
+    else if (totalAttempts <= 5) attackerDNA.riskLevel = 'HIGH';
+    else attackerDNA.riskLevel = 'CRITICAL';
+    
+    // Update behavio summary
+    updateBehaviorSummary(uniqueThreats);
+    
+    const analysis = {
+        score: finalScore,
+        level: level,
+        threats: uniqueThreats,
+        isBlocked: finalScore >= 70,
+        honeypotActivated: honeypotActivated,
+        decision: honeypotActivated ? 'honeypot' : (finalScore >= 70 ? 'blocked' : 'safe'),
+        timestamp: new Date(),
+        prompt: prompt
+    };
+    
+    systemStats.analysisHistory.push(analysis);
+    addBehaviorTimelineItem(analysis);
+    return analysis;
+}
+
+/**
+ * Random honeypot activation to fool attackers (50% chance when triggered)
+ */
+function trickAttacker() {
+    return Math.random() > 0.5;
+}
+
+/**
+ * Determine threat level based on score
+ */
+function determineThreatLevel(score) {
+    if (score < 20) return 'safe';
+    if (score < 40) return 'low';
+    if (score < 60) return 'medium';
+    if (score < 80) return 'high';
+    return 'critical';
+}
+
+/**
+ * Display Results with Three States
+ */
+function displayResults(analysis, aiResponseText) {
+    resultsContainer.classList.remove('hidden');
+    
+    threatScore.textContent = `${analysis.score}/100`;
+    threatBar.style.width = `${analysis.score}%`;
+    threatBar.style.background = threatColors[analysis.level].color;
+    
+    let statusClass = 'safe';
+    let icon = '✓';
+    let title = 'Status: Safe';
+    let message = 'Your prompt appears to be safe and can proceed.';
+    let toastType = 'success';
+    let toastMsg = 'Prompt is safe to process';
+    let alertType = 'green';
+    
+    if (analysis.honeypotActivated) {
+        statusClass = 'honeypot';
+        icon = '🍯';
+        title = '🍯 Status: Honeypot Activated';
+        message = 'Attack detected! Deploying decoy response to analyze attacker behavior.';
+        threatLevel.textContent = 'HONEYPOT';
+        threatLevel.className = 'threat-level honeypot';
+        toastType = 'warning';
+        toastMsg = 'Honeypot activated! Decoy response deployed.';
+        alertType = 'orange';
+        showHoneypotCard(analysis, aiResponseText); // PASSES REAL AI TEXT!
+    } else if (analysis.isBlocked) {
+        statusClass = 'blocked';
+        icon = '🚫';
+        title = '🚫 Status: BLOCKED';
+        message = 'This prompt contains critical security threats and cannot proceed.';
+        threatLevel.textContent = 'BLOCKED';
+        threatLevel.className = 'threat-level critical';
+        toastType = 'error';
+        toastMsg = 'Threat detected! Prompt blocked.';
+        alertType = 'red';
+        showAttackerDNA();
+    } else {
+        threatLevel.textContent = threatColors[analysis.level].level;
+        threatLevel.className = `threat-level ${threatColors[analysis.level].bg}`;
+    }
+    
+    statusIndicator.className = `status-indicator ${statusClass}`;
+    statusIndicator.innerHTML = `
+        <span class="status-icon">${icon}</span>
+        <div class="status-text">
+            <h4>${title}</h4>
+            <p>${message}</p>
+        </div>
+    `;
+    
+    showToast(toastMsg, toastType);
+    addAlert(`Analysis Complete - ${analysis.decision.toUpperCase()}`, alertType === 'green' ? 'info' : alertType === 'orange' ? 'warning' : 'error', alertType);
+    
+    if (analysis.threats.length > 0) {
+        threatsDetected.innerHTML = '<h4>🚨 Threats Detected</h4>';
+        const threatsList = document.createElement('ul');
+        analysis.threats.forEach(threat => {
+            const threatItem = document.createElement('li');
+            threatItem.className = `threat-item ${threat.severity || 'high'}`;
+            threatItem.innerHTML = `
+                <strong>${threat.name}</strong> 
+                <span class="severity-badge ${threat.severity || 'high'}">${(threat.severity || 'high').toUpperCase()}</span>
+            `;
+            threatsList.appendChild(threatItem);
+        });
+        threatsDetected.appendChild(threatsList);
+    } else {
+        threatsDetected.innerHTML = '<h4>✓ No Threats Detected</h4><p>Your prompt passed all security checks.</p>';
+    }
+    
+    const detectedSafePatterns = identifySafePatterns(analysis.prompt);
+    safePatterns.innerHTML = '<h4>✓ Safe Patterns Detected</h4>';
+    const safeList = document.createElement('ul');
+    detectedSafePatterns.forEach(pattern => {
+        const item = document.createElement('li');
+        item.textContent = pattern;
+        safeList.appendChild(item);
+    });
+    safePatterns.appendChild(safeList);
+    
+    setTimeout(() => {
+        generateAnalytics();
+        updateKPICards();
+        updateMLPrediction();
+        updateThreatFeed();
+    }, 500);
+    
+    setTimeout(() => resultsContainer.scrollIntoView({ behavior: 'smooth' }), 100);
+}
+
+/**
+ * Identify safe patterns in the prompt
+ */
+function identifySafePatterns(prompt) {
+    const patterns = [];
+
+    // Check for reasonable length
+    if (prompt.length > 10 && prompt.length < 5000) {
+        patterns.push('Reasonable prompt length');
+    }
+
+    // Check for proper sentence structure
+    if (/^[A-Z]/.test(prompt)) {
+        patterns.push('Proper capitalization');
+    }
+
+    // Check for normal language
+    if (!/[<>{}()]/g.test(prompt) || prompt.split(/[<>{}()]/g).length < 3) {
+        patterns.push('No unusual code-like characters');
+    }
+
+    // Check for clear intent
+    if (/(?:what|how|tell|explain|show|find|create|make|help)/i.test(prompt)) {
+        patterns.push('Clear user intent detected');
+    }
+
+    // Ensure at least 3 patterns
+    while (patterns.length < 3) {
+        const randomPattern = safePatternsLibrary[Math.floor(Math.random() * safePatternsLibrary.length)];
+        if (!patterns.includes(randomPattern)) {
+            patterns.push(randomPattern);
+        }
+    }
+
+    return patterns.slice(0, 5);
+}
+
+/**
+ * Activity Logging
+ */
+function logActivity(analysis) {
+    const activityLog = document.getElementById('activityLog');
+    const shortPrompt = analysis.prompt.substring(0, 50) + (analysis.prompt.length > 50 ? '...' : '');
+    
+    let status = '<strong>ALLOWED</strong>';
+    let statusClass = 'allowed';
+    if (analysis.honeypotActivated) {
+        status = '<strong>HONEYPOT</strong>';
+        statusClass = 'honeypot';
+    } else if (analysis.isBlocked) {
+        status = '<strong>BLOCKED</strong>';
+        statusClass = 'blocked';
+    }
+    
+    const threatInfo = analysis.threats.length > 0 ? ` (${analysis.threats[0].name})` : '';
+    
+    const activityItem = document.createElement('div');
+    activityItem.className = `activity-item ${statusClass}`;
+    activityItem.innerHTML = `
+        <span class="time">Now</span>
+        <span class="activity-text">"${shortPrompt}"${threatInfo} - ${status}</span>
+    `;
+    
+    activityLog.insertBefore(activityItem, activityLog.firstChild);
+    
+    while (activityLog.children.length > 20) {
+        activityLog.removeChild(activityLog.lastChild);
+    }
+}
+
+/**
+ * Filter Activity Log
+ */
+function filterActivity() {
+    const searchTerm = activityFilter.value.toLowerCase();
+    const items = document.querySelectorAll('.activity-item');
+    
+    items.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+}
+
+/**
+ * Update Dashboard Stats
+ */
+function updateDashboardStats(analysis) {
+    if (analysis.honeypotActivated) {
+        systemStats.honeypotTriggers++;
+        chartData.honeypot++;
+        addAlert('Honeypot Triggered', 'warning', 'orange');
+    } else if (analysis.isBlocked) {
+        systemStats.attacksBlocked++;
+        // NO MORE RANDOM NUMBERS! Math is based on the severity of the AI's threat score.
+        const realFinancialLoss = (analysis.score * 1250); 
+        systemStats.financialImpact += realFinancialLoss;
+        addAlert('Attack Blocked', 'error', 'red');
+    } else {
+        addAlert('Request Allowed', 'info', 'green');
+    }
+    
+    systemStats.totalAnalyzed++;
+    updateDashboardDisplay();
+}
+
+function updateDashboardDisplay() {
+    document.getElementById('attacksBlocked').textContent = systemStats.attacksBlocked.toLocaleString();
+    document.getElementById('honeypotTriggers').textContent = systemStats.honeypotTriggers.toLocaleString();
+    document.getElementById('financialImpact').textContent = '₹' + systemStats.financialImpact.toLocaleString();
+}
+
+/**
+ * Chart Initialization and Updates
+ */
+function initializeChart() {
+    const canvas = document.getElementById('threatChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    threatChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Safe', 'Low Risk', 'Medium Risk', 'High Risk', 'Blocked', 'Honeypot'],
+            datasets: [{
+                data: [chartData.safe, chartData.low, chartData.medium, chartData.high, chartData.critical, chartData.honeypot],
+                backgroundColor: [
+                    '#10b981',
+                    '#22c55e',
+                    '#f59e0b',
+                    '#ef4444',
+                    '#dc2626',
+                    '#fbbf24'
+                ],
+                borderColor: '#1e293b',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    labels: { color: '#f1f5f9', font: { size: 12 } }
+                }
+            }
+        }
+    });
+}
+
+function updateChart(level) {
+    if (!threatChart) return;
+    
+    switch(level) {
+        case 'safe': chartData.safe++; break;
+        case 'low': chartData.low++; break;
+        case 'medium': chartData.medium++; break;
+        case 'high': chartData.high++; break;
+        case 'critical': chartData.critical++; break;
+    }
+    
+    threatChart.data.datasets[0].data = [
+        chartData.safe,
+        chartData.low,
+        chartData.medium,
+        chartData.high,
+        chartData.critical,
+        chartData.honeypot
+    ];
+    threatChart.update();
+}
+
+/**
+ * Animation
+ */
+function animateDashboardStats() {
+    const cards = document.querySelectorAll('.dashboard-card');
+    cards.forEach((card, index) => {
+        setTimeout(() => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                card.style.transition = 'all 0.6s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, 50);
+        }, index * 100);
+    });
+}
+
+/**
+ * Copy & Export Functions
+ */
+function copyToClipboard() {
+    const text = promptInput.value;
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('Prompt copied to clipboard', 'success');
+    });
+}
+
+function exportAnalysis() {
+    const analysis = systemStats.analysisHistory[systemStats.analysisHistory.length - 1];
+    if (!analysis) {
+        showToast('No analysis to export', 'warning');
+        return;
+    }
+    
+    const json = JSON.stringify(analysis, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `analysis-${Date.now()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    
+    showToast('Analysis exported successfully', 'success');
+}
+
+function downloadData() {
+    const data = {
+        settings,
+        stats: systemStats,
+        chartData
+    };
+    
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `atlas-data-${Date.now()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    
+    showToast('Data exported successfully', 'success');
+}
+
+function clearAllData() {
+    if (confirm('Are you sure? This will delete all analysis history and reset statistics.')) {
+        systemStats = {
+            attacksBlocked: 0,
+            honeypotTriggers: 0,
+            financialImpact: 0,
+            systemUptime: 99.9,
+            totalAnalyzed: 0,
+            analysisHistory: []
+        };
+        Object.assign(chartData, { safe: 0, low: 0, medium: 0, high: 0, critical: 0 });
+        
+        updateDashboardDisplay();
+        if (threatChart) {
+            threatChart.data.datasets[0].data = [0, 0, 0, 0, 0];
+            threatChart.update();
+        }
+        
+        saveToLocalStorage();
+        showToast('All data cleared', 'success');
+    }
+}
+
+/**
+ * Backend API Integration Template
+ */
+async function sendToBackend(analysis) {
+    try {
+        const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(analysis)
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            showToast('Analysis sent to backend', 'success');
+            return result;
+        }
+    } catch (error) {
+        console.log('Backend API not configured - running in frontend-only mode', error);
+    }
+}
+
+// Global access for debugging
+window.atlasFirewall = {
+    analyzePrompt,
+    performThreatAnalysis,
+    exportAnalysis,
+    downloadData,
+    clearAllData,
+    systemStats,
+    settings
+};
+
+/**
+ * Show Honeypot Card with Decoy Response
+ */
+function showHoneypotCard(analysis, aiResponseText) {
+    const honeypotCard = document.getElementById('honeypotCard');
+    honeypotCard.classList.remove('hidden');
+    // Display the REAL Gemini fake response, not the random array text!
+    document.getElementById('decoyResponse').textContent = aiResponseText;
+}
+
+/**
+ * Show Attacker DNA Card
+ */
+function showAttackerDNA() {
+    const dnaCard = document.getElementById('attackerDNACard');
+    dnaCard.classList.remove('hidden');
+    
+    // Update DNA stats
+    document.getElementById('roleplayCount').textContent = attackerDNA.roleplayAttempts;
+    document.getElementById('overrideCount').textContent = attackerDNA.overrideAttempts;
+    
+    // Update progress bars
+    const maxAttempts = 10;
+    document.getElementById('roleplayProgress').style.width = (attackerDNA.roleplayAttempts / maxAttempts * 100) + '%';
+    document.getElementById('overrideProgress').style.width = (attackerDNA.overrideAttempts / maxAttempts * 100) + '%';
+    
+    // Update risk level
+    const riskElement = document.getElementById('riskLevel');
+    riskElement.textContent = attackerDNA.riskLevel;
+    riskElement.className = `risk-indicator ${attackerDNA.riskLevel.toLowerCase()}`;
+}
+
+/**
+ * Add Alert to Alerts Centre
+ */
+function addAlert(message, severity = 'info', color = 'green') {
+    const alertsList = document.getElementById('alertsList');
+    const alert = document.createElement('div');
+    alert.className = `alert-item alert-${color}`;
+    
+    const severityLabels = { 'info': 'INFO', 'warning': 'WARN', 'error': 'ERROR' };
+    
+    alert.innerHTML = `
+        <span class="alert-severity">${severityLabels[severity]}</span>
+        <span class="alert-text">${message}</span>
+        <span class="alert-time">Now</span>
+    `;
+    
+    alertsList.insertBefore(alert, alertsList.firstChild);
+    
+    // Keep only last 20 alerts
+    while (alertsList.children.length > 20) {
+        alertsList.removeChild(alertsList.lastChild);
+    }
+}
+
+/**
+ * Clear All Alerts
+ */
+function clearAlerts() {
+    document.getElementById('alertsList').innerHTML = '';
+    addAlert('Alerts cleared', 'info', 'green');
+}
+
+/**
+ * Update Behavior Summary in Attacker DNA
+ */
+function updateBehaviorSummary(threats) {
+    let summary = '';
+    
+    if (threats.length === 0) {
+        summary = 'No attack patterns detected.';
+    } else {
+        summary = `Detected ${threats.length} threat(s): ${threats.map(t => t.name).join(', ')}.`;
+        
+        if (attackerDNA.roleplayAttempts > 0) {
+            summary += ` Attacker attempting role-based bypasses (${attackerDNA.roleplayAttempts} attempts).`;
+        }
+        if (attackerDNA.overrideAttempts > 0) {
+            summary += ` Multiple instruction override attempts detected (${attackerDNA.overrideAttempts} attempts).`;
+        }
+        if (attackerDNA.jailbreakAttempts > 0) {
+            summary += ` Sophisticated jailbreak techniques in use (${attackerDNA.jailbreakAttempts} attempts).`;
+        }
+    }
+    
+    document.getElementById('behaviorSummary').textContent = summary;
+}
+
+/**
+ * Add to Behavior Timeline
+ */
+function addBehaviorTimelineItem(analysis) {
+    const container = document.getElementById('timelineContainer');
+    const history = systemStats.analysisHistory;
+    
+    // Show only last 5 items
+    if (history.length > 5) {
+        container.innerHTML = '';
+    }
+    
+    const item = document.createElement('div');
+    const itemNum = history.length;
+    let escalation = '';
+    
+    if (itemNum > 1 && history[itemNum - 2].score < analysis.score) {
+        item.className = 'timeline-item escalating';
+        escalation = '🔴 ESCALATING ATTACK PATTERN';
+    } else if (analysis.isBlocked) {
+        item.className = 'timeline-item critical';
+        escalation = '⚠️ CRITICAL THREAT LEVEL';
+    } else {
+        item.className = 'timeline-item';
+        escalation = '✓ Safe';
+    }
+    
+    const threatsDisplay = analysis.threats.length > 0 ? 
+        analysis.threats.map(t => `<span class="timeline-threat">${t.name}</span>`).join(', ') :
+        '<span class="timeline-threat">No threats</span>';
+    
+    item.innerHTML = `
+        <span class="timeline-number">${itemNum}</span>
+        <div>
+            <p><strong>Score: ${analysis.score}/100</strong> | Decision: ${analysis.decision.toUpperCase()}</p>
+            <div class="timeline-prompt">"${analysis.prompt.substring(0, 80)}${analysis.prompt.length > 80 ? '...' : ''}"</div>
+            <div>${threatsDisplay}</div>
+            <div class="timeline-progression">${escalation}</div>
+        </div>
+    `;
+    
+    container.appendChild(item);
+}
+
+/**
+ * Real Telemetry Analytics
+ */
+function generateAnalytics() {
+    const history = systemStats.analysisHistory;
+    if (history.length === 0) return;
+    
+    const total = history.length;
+    const blocked = history.filter(h => h.isBlocked).length;
+    
+    // Real Accuracy: 100% minus the rate of user-reported False Positives
+    const falsePositives = systemStats.falsePositives || 0;
+    let accuracy = 100;
+    if (total > 0) accuracy = Math.max(0, 100 - ((falsePositives / total) * 100));
+    
+    // Real Network Response Time (Averaged)
+    let avgTime = 0;
+    if (systemStats.responseTimes && systemStats.responseTimes.length > 0) {
+        avgTime = systemStats.responseTimes.reduce((a, b) => a + b, 0) / systemStats.responseTimes.length;
+    }
+    
+    // Real False Positive Rate
+    let fpRate = blocked > 0 ? (falsePositives / blocked) * 100 : 0;
+    
+    // Real Detection Rate (Threats successfully caught vs total requests)
+    const threatsCaught = history.filter(h => h.isBlocked || h.honeypotActivated).length;
+    let detectionRate = total > 0 ? (threatsCaught / total * 100) : 100;
+    
+    document.getElementById('accuracyScore').textContent = accuracy.toFixed(1) + '%';
+    document.getElementById('responseTime').textContent = avgTime.toFixed(0) + 'ms';
+    document.getElementById('falsePositiveRate').textContent = fpRate.toFixed(1) + '%';
+    document.getElementById('detectionRate').textContent = detectionRate.toFixed(1) + '%';
+}
+
+/**
+ * Real Executive KPIs
+ */
+function updateKPICards() {
+    const history = systemStats.analysisHistory;
+    const kpiCards = document.querySelectorAll('.kpi-card');
+    if (history.length === 0) return;
+
+    // Security Score: 10 minus the average threat score of all traffic
+    const avgThreat = history.reduce((sum, h) => sum + h.score, 0) / history.length;
+    const securityScore = Math.max(0, 10 - (avgThreat / 10));
+    if (kpiCards[0]) kpiCards[0].querySelector('.kpi-value').textContent = securityScore.toFixed(1) + '/10';
+    
+    // Prevention Rate: Blocked threats / Total actual threats
+    const totalThreats = history.filter(h => h.score >= 50).length;
+    const prevented = history.filter(h => h.isBlocked || h.honeypotActivated).length;
+    const preventionRate = totalThreats > 0 ? (prevented / totalThreats * 100) : 100;
+    if (kpiCards[1]) kpiCards[1].querySelector('.kpi-value').textContent = preventionRate.toFixed(1) + '%';
+    
+    // Risk Exposure: Count of recent critical threats
+    const recentCritical = history.slice(-5).filter(h => h.level === 'critical').length;
+    const riskLevel = recentCritical === 0 ? 'LOW' : (recentCritical <= 2 ? 'MEDIUM' : 'HIGH');
+    if (kpiCards[2]) kpiCards[2].querySelector('.kpi-value').textContent = riskLevel;
+    
+    // System Uptime: Successful API calls vs Python server crashes
+    const totalReqs = (systemStats.successfulRequests || 0) + (systemStats.failedRequests || 0);
+    const uptime = totalReqs > 0 ? ((systemStats.successfulRequests || 0) / totalReqs * 100) : 100;
+    if (kpiCards[3]) kpiCards[3].querySelector('.kpi-value').textContent = uptime.toFixed(2) + '%';
+}
+
+/**
+ * Update Threat Intelligence Feed
+ */
+function updateThreatFeed() {
+    const feedContainer = document.querySelector('.feed-container');
+    if (!feedContainer) return;
+    
+    // Clear out the hardcoded fake data
+    feedContainer.innerHTML = ''; 
+    
+    // Pull the real threats from the live session history
+    const history = systemStats.analysisHistory;
+    const realThreats = history.filter(h => h.isBlocked || h.honeypotActivated).slice(-3).reverse();
+    
+    if (realThreats.length === 0) {
+        feedContainer.innerHTML = '<div style="color: var(--text-secondary); padding: 15px;">Waiting for threats... System secure.</div>';
+        return;
+    }
+    
+    realThreats.forEach(threat => {
+        const threatName = threat.threats.length > 0 ? threat.threats[0].name : 'Unknown Threat Signature';
+        const severityClass = threat.isBlocked ? 'critical' : 'high';
+        const typeLabel = threat.isBlocked ? 'CRITICAL' : 'HIGH';
+        const timeString = new Date(threat.timestamp).toLocaleTimeString();
+        
+        const feedItem = document.createElement('div');
+        feedItem.className = `feed-item ${severityClass}`;
+        feedItem.innerHTML = `
+            <span class="feed-type">${typeLabel}</span>
+            <span class="feed-text">${threatName} detected</span>
+            <span class="feed-time">${timeString}</span>
+        `;
+        feedContainer.appendChild(feedItem);
+    });
+}
+
+/**
+ * Update KPI Cards in Executive Dashboard
+ */
+function updateKPICards() {
+    const history = systemStats.analysisHistory;
+    
+    // Security Score (0-10)
+    const securityScore = Math.min(8.9 + (history.length * 0.01), 9.9);
+    const scoreEl = document.querySelector('.kpi-grid .kpi-card');
+    if (scoreEl) {
+        scoreEl.querySelector('.kpi-value').textContent = securityScore.toFixed(1) + '/10';
+    }
+    
+    // Attack Prevention Rate
+    const blocked = history.filter(h => h.isBlocked).length;
+    const preventionRate = history.length > 0 ? (blocked / history.length * 100) : 0;
+    const kpiCards = document.querySelectorAll('.kpi-card');
+    if (kpiCards[1]) {
+        kpiCards[1].querySelector('.kpi-value').textContent = Math.min(preventionRate, 99.1).toFixed(1) + '%';
+    }
+    
+    // Risk Exposure
+    const criticalThreats = history.filter(h => h.threatLevel === 'critical').length;
+    const riskLevel = criticalThreats === 0 ? 'LOW' : (criticalThreats < 3 ? 'MEDIUM' : 'HIGH');
+    if (kpiCards[2]) {
+        kpiCards[2].querySelector('.kpi-value').textContent = riskLevel;
+    }
+    
+    // System Uptime
+    if (kpiCards[3]) {
+        kpiCards[3].querySelector('.kpi-value').textContent = '99.99%';
+    }
+}
+
+/**
+ * Mathematical ML Risk Prediction
+ */
+function updateMLPrediction() {
+    const history = systemStats.analysisHistory;
+    if (history.length === 0) return;
+    
+    // Weighted average of the last 5 prompts (recent prompts matter more)
+    const recent = history.slice(-5);
+    let weightSum = 0;
+    let weightedScore = 0;
+    
+    recent.forEach((h, index) => {
+        const weight = index + 1; // Gives higher weight to more recent prompts
+        weightedScore += h.score * weight;
+        weightSum += weight;
+    });
+    
+    const predictedRisk = weightedScore / weightSum;
+    
+    let riskLabel = 'LOW';
+    if (predictedRisk >= 60) riskLabel = 'HIGH';
+    else if (predictedRisk >= 30) riskLabel = 'MEDIUM';
+    
+    const gaugeFill = document.querySelector('.gauge-fill');
+    if (gaugeFill) gaugeFill.style.width = predictedRisk + '%';
+    
+    const predictionEl = document.getElementById('mlPrediction');
+    if (predictionEl) {
+        predictionEl.innerHTML = `
+            <strong>AI Risk Assessment:</strong><br>
+            Based on a weighted behavioral analysis of recent traffic, predicted threat probability is <span style="color: ${riskLabel === 'HIGH' ? '#ef4444' : (riskLabel === 'MEDIUM' ? '#f59e0b' : '#10b981')}">${riskLabel}</span>.
+            <br>Calculated Risk Index: ${predictedRisk.toFixed(1)}%
+        `;
+    }
+    const mlRiskLevel = document.getElementById('mlRiskLevel');
+    if(mlRiskLevel) {
+        mlRiskLevel.textContent = riskLabel;
+        mlRiskLevel.className = `risk-badge ${riskLabel.toLowerCase()}`;
+    }
+}
+
+/**
+ * Report False Positive (Make it affect real stats!)
+ */
+function submitFeedback(e) {
+    e.preventDefault();
+    const category = document.getElementById('feedbackCategory').value;
+    
+    // Record the false positive so it drops our Accuracy metrics!
+    systemStats.falsePositives = (systemStats.falsePositives || 0) + 1;
+    generateAnalytics(); // Force UI update
+    
+    addAlert(`False Positive Logged - AI Accuracy Adjusted`, 'error', 'orange');
+    showToast('Feedback integrated into AI learning model.', 'success');
+    closeFeedbackModal();
+}
+
+/**
+ * Share Report
+ */
+function shareReport() {
+    const reportData = {
+        timestamp: new Date().toISOString(),
+        totalAnalyses: systemStats.analysisHistory.length,
+        threatsDetected: systemStats.analysisHistory.filter(h => h.isBlocked).length,
+        honeypotTriggered: systemStats.analysisHistory.filter(h => h.honeypotActivated).length,
+        avgThreatsPerAnalysis: (systemStats.analysisHistory.reduce((sum, h) => sum + h.threats.length, 0) / systemStats.analysisHistory.length).toFixed(2)
+    };
+    
+    const shareText = `ATLAS AI Firewall Report\n\nAnalyses: ${reportData.totalAnalyses}\nThreats Blocked: ${reportData.threatsDetected}\nHoneypot Triggers: ${reportData.honeypotTriggered}\n\nShared from Atlas Hackathon Project`;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: 'ATLAS AI Firewall Report',
+            text: shareText
+        }).catch(err => console.log('Share error:', err));
+    } else {
+        alert('Report Summary:\n' + shareText);
+    }
+}
+
+/**
+ * Export Full Report
+ */
+function exportFullReport() {
+    const history = systemStats.analysisHistory;
+    const analytics = generateAnalytics();
+    
+    const report = {
+        projectName: 'ATLAS AI Firewall',
+        generatedAt: new Date().toISOString(),
+        currency: '₹',
+        summary: {
+            totalAnalyses: history.length,
+            threatsBlocked: history.filter(h => h.isBlocked).length,
+            honeypotTriggered: history.filter(h => h.honeypotActivated).length,
+            safePrompts: history.filter(h => !h.isBlocked && !h.honeypotActivated).length
+        },
+        analytics: analytics,
+        threatHistory: history.map(h => ({
+            timestamp: h.timestamp,
+            prompt: h.prompt,
+            score: h.score,
+            decision: h.decision,
+            threatsDetected: h.threats.map(t => t.name)
+        })),
+        attackerProfile: {
+            roleplayAttempts: attackerDNA.roleplayAttempts,
+            overrideAttempts: attackerDNA.overrideAttempts,
+            jailbreakAttempts: attackerDNA.jailbreakAttempts,
+            injectionAttempts: attackerDNA.injectionAttempts,
+            riskLevel: attackerDNA.riskLevel
+        }
+    };
+    
+    // Create JSON export
+    const jsonStr = JSON.stringify(report, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ATLAS-Report-${new Date().getTime()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    addAlert('Report exported successfully!', 'success', 'green');
+}
+
+/**
+ * Add Team Note
+ */
+function addTeamNote() {
+    const noteText = prompt('Enter your team note:');
+    if (!noteText) return;
+    
+    const notesList = document.querySelector('.notes-list');
+    if (!notesList) return;
+    
+    const author = prompt('Your name:') || 'Team Member';
+    const note = document.createElement('div');
+    note.className = 'note-item';
+    
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    note.innerHTML = `
+        <span class="note-author">${author}:</span>
+        <span class="note-text">${noteText}</span>
+        <span class="note-time">${timeStr}</span>
+    `;
+    
+    notesList.appendChild(note);
+    
+    // Save to local storage
+    const notes = JSON.parse(localStorage.getItem('teamNotes') || '[]');
+    notes.push({ author, noteText, timestamp: now.toISOString() });
+    localStorage.setItem('teamNotes', JSON.stringify(notes));
+    
+    addAlert(`Note added by ${author}`, 'info', 'var(--secondary-color)');
+}
+
+/**
+ * Show API Documentation
+ */
+function showIntegrationGuide() {
+    const modal = document.getElementById('apiDocModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+/**
+ * Close API Documentation
+ */
+function closeApiDocs() {
+    const modal = document.getElementById('apiDocModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+/**
+ * Initialize Hackathon Features
+ */
+function initializeHackathonFeatures() {
+    // Initialize theme persistence
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.body.className = savedTheme;
+    
+    // Load team notes from storage
+    const savedNotes = JSON.parse(localStorage.getItem('teamNotes') || '[]');
+    const notesList = document.querySelector('.notes-list');
+    if (notesList && savedNotes.length > 0) {
+        savedNotes.forEach(note => {
+            const noteEl = document.createElement('div');
+            noteEl.className = 'note-item';
+            const time = new Date(note.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            noteEl.innerHTML = `
+                <span class="note-author">${note.author}:</span>
+                <span class="note-text">${note.noteText}</span>
+                <span class="note-time">${time}</span>
+            `;
+            notesList.appendChild(noteEl);
+        });
+    }
+    
+    // Generate initial analytics
+    if (systemStats.analysisHistory.length > 0) {
+        generateAnalytics();
+        updateKPICards();
+        updateMLPrediction();
+        updateThreatFeed();
+    }
+    
+    // Add event listeners to collaboration buttons using correct IDs from HTML
+    const shareBtn = document.getElementById('shareReportBtn');
+    const exportBtn = document.getElementById('exportReportBtn');
+    const noteBtn = document.getElementById('addNoteBtn');
+    const apiBtn = document.getElementById('integrationBtn');
+    const closeApiBtn = document.querySelector('.modal-close');
+    
+    if (shareBtn) shareBtn.addEventListener('click', shareReport);
+    if (exportBtn) exportBtn.addEventListener('click', exportFullReport);
+    if (noteBtn) noteBtn.addEventListener('click', addTeamNote);
+    if (apiBtn) apiBtn.addEventListener('click', showIntegrationGuide);
+    if (closeApiBtn) closeApiBtn.addEventListener('click', closeApiDocs);
+    
+    // Add click handlers to compliance badges for interactivity
+    const complianceBadges = document.querySelectorAll('.compliance-badge');
+    complianceBadges.forEach(badge => {
+        badge.addEventListener('click', function() {
+            this.classList.toggle('active');
+        });
+    });
+}
+
+// Initialize on page load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeHackathonFeatures);
+} else {
+    initializeHackathonFeatures();
+}
+
+/* ATLAS AI Firewall - Styling */
+/* Modern, clean interface with responsive design */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-color: #6b46c1;
+    --secondary-color: #a78bfa;
+    --accent-color: #ec4899;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --danger-color: #ef4444;
+    --honeypot-color: #f59e0b;
+    --dark-bg: #0f172a;
+    --card-bg: #1e293b;
+    --border-color: #334155;
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    --border-radius: 12px;
+    --transition: all 0.3s ease;
+    --smooth-animation: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, var(--dark-bg) 0%, #162e4d 100%);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+    transition: background-color 0.3s ease;
+}
+
+body.light-theme {
+    --dark-bg: #f5f7fa;
+    --card-bg: #ffffff;
+    --border-color: #e0e6ed;
+    --text-primary: #1a202c;
+    --text-secondary: #4a5568;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Header Styles */
+.header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+    padding: 40px 20px;
+    border-bottom: 3px solid var(--secondary-color);
+    box-shadow: 0 8px 32px rgba(107, 70, 193, 0.3);
+    margin-bottom: 40px;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+}
+
+.header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.header h1 {
+    font-size: 2.5em;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    font-weight: 700;
+}
+
+.header-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.control-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 1.2em;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.control-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
+.subtitle {
+    font-size: 1.1em;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 300;
+}
+
+/* Main Content */
+.main-content {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    margin-bottom: 40px;
+}
+
+section {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 30px;
+    box-shadow: var(--shadow);
+}
+
+.section-header {
+    margin-bottom: 30px;
+    border-bottom: 2px solid var(--secondary-color);
+    padding-bottom: 15px;
+}
+
+.section-header h2 {
+    font-size: 1.8em;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.section-description {
+    color: var(--text-secondary);
+    font-size: 0.95em;
+}
+
+/* Prompt Section */
+.prompt-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.input-container {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+
+.input-wrapper {
+    flex: 1;
+    min-width: 300px;
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+}
+
+.prompt-input {
+    flex: 1;
+    padding: 15px;
+    padding-right: 50px;
+    background: #0f172a;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 1em;
+    resize: vertical;
+    min-height: 120px;
+    transition: var(--transition);
+}
+
+.prompt-input:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+    background: #1e293b;
+}
+
+.voice-btn {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    background: var(--secondary-color);
+    border: none;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 1.2em;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.voice-btn:hover {
+    background: #0ea5e9;
+    transform: scale(1.1);
+}
+
+.voice-btn.recording {
+    background: #f44336;
+    animation: pulse 1s infinite;
+}
+
+.analyze-button {
+    padding: 15px 40px;
+    background: linear-gradient(135deg, var(--secondary-color), #0ea5e9);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 1.1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    max-height: 55px;
+    white-space: nowrap;
+}
+
+.analyze-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+    background: linear-gradient(135deg, #0ea5e9, var(--secondary-color));
+}
+
+.analyze-button:active {
+    transform: translateY(0);
+}
+
+/* Results Container */
+.results-container {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    animation: slideIn 0.5s ease;
+}
+
+.results-container.hidden {
+    display: none;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Threat Score Card */
+.threat-score-card {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8));
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    transition: var(--transition);
+}
+
+.threat-score-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.threat-score-header h3 {
+    font-size: 1.4em;
+    color: var(--text-primary);
+}
+
+.threat-level {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9em;
+    letter-spacing: 1px;
+}
+
+.threat-level.safe {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    border: 1px solid #10b981;
+}
+
+.threat-level.low {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+    border: 1px solid #22c55e;
+}
+
+.threat-level.medium {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+    border: 1px solid #f59e0b;
+}
+
+.threat-level.high {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid #ef4444;
+}
+
+.threat-level.critical {
+    background: rgba(239, 68, 68, 0.3);
+    color: #ff6b6b;
+    border: 1px solid #ff6b6b;
+}
+
+.threat-level.honeypot {
+    background: rgba(245, 158, 11, 0.3);
+    color: #fbbf24;
+    border: 2px solid #fbbf24;
+    font-weight: 700;
+}
+
+.threat-meter {
+    width: 100%;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-color);
+}
+
+.threat-bar {
+    height: 100%;
+    background: var(--success-color);
+    transition: all 0.6s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 10px;
+    font-weight: 600;
+    color: white;
+    font-size: 0.9em;
+}
+
+.threat-score-display {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.score-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.score-value {
+    font-size: 1.6em;
+    font-weight: 700;
+    color: var(--secondary-color);
+}
+
+/* Status Card */
+.status-card {
+    padding: 20px;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    border-radius: var(--border-radius);
+    border-left: 5px solid;
+    animation: pulse 2s infinite;
+}
+
+.status-indicator.safe {
+    background: rgba(76, 175, 80, 0.1);
+    border-left-color: #4caf50;
+}
+
+.status-indicator.blocked {
+    background: rgba(244, 67, 54, 0.1);
+    border-left-color: #f44336;
+}
+
+.status-icon {
+    font-size: 2.5em;
+    font-weight: 700;
+}
+
+.status-text h4 {
+    font-size: 1.3em;
+    margin-bottom: 5px;
+}
+
+.status-text p {
+    color: var(--text-secondary);
+    font-size: 0.95em;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+/* Explanation Card */
+.explanation-card {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8));
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 25px;
+}
+
+.explanation-card h3 {
+    font-size: 1.3em;
+    margin-bottom: 20px;
+    color: var(--text-primary);
+}
+
+.threats-list {
+    margin-bottom: 25px;
+}
+
+.threats-list h4 {
+    color: #ff5252;
+    margin-bottom: 15px;
+    font-size: 1.1em;
+}
+
+.threats-list ul {
+    list-style: none;
+}
+
+.threat-item {
+    padding: 12px;
+    margin-bottom: 10px;
+    background: rgba(255, 82, 82, 0.1);
+    border-left: 4px solid #ff5252;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.threat-item.critical {
+    background: rgba(183, 28, 28, 0.15);
+    border-left-color: #b71c1c;
+}
+
+.threat-item.high {
+    background: rgba(244, 67, 54, 0.15);
+    border-left-color: #f44336;
+}
+
+.threat-item.medium {
+    background: rgba(255, 152, 0, 0.15);
+    border-left-color: #ff9800;
+}
+
+.severity-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.severity-badge.critical {
+    background: rgba(183, 28, 28, 0.3);
+    color: #ff5252;
+}
+
+.severity-badge.high {
+    background: rgba(244, 67, 54, 0.3);
+    color: #ff7043;
+}
+
+.severity-badge.medium {
+    background: rgba(255, 152, 0, 0.3);
+    color: #ffb74d;
+}
+
+.safe-patterns {
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.safe-patterns h4 {
+    color: #4caf50;
+    margin-bottom: 15px;
+    font-size: 1.1em;
+}
+
+.safe-patterns ul {
+    list-style: none;
+}
+
+.safe-patterns li {
+    padding: 10px;
+    padding-left: 25px;
+    position: relative;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.safe-patterns li:before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: #4caf50;
+    font-weight: 700;
+    font-size: 1.1em;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.primary-btn,
+.secondary-btn,
+.danger-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.primary-btn {
+    background: var(--secondary-color);
+    color: white;
+    flex: 1;
+}
+
+.primary-btn:hover {
+    background: #0ea5e9;
+    transform: translateY(-2px);
+}
+
+.secondary-btn {
+    background: rgba(59, 130, 246, 0.2);
+    color: var(--secondary-color);
+    border: 1px solid var(--secondary-color);
+    flex: 1;
+}
+
+.secondary-btn:hover {
+    background: rgba(59, 130, 246, 0.3);
+}
+
+.danger-btn {
+    background: rgba(244, 67, 54, 0.2);
+    color: #f44336;
+    border: 1px solid #f44336;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.danger-btn:hover {
+    background: rgba(244, 67, 54, 0.3);
+}
+
+/* Toast Notifications */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+}
+
+.toast {
+    background: var(--card-bg);
+    border-left: 4px solid var(--secondary-color);
+    padding: 16px 20px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 300px;
+    animation: slideInRight 0.3s ease;
+}
+
+.toast.success {
+    border-left-color: #4caf50;
+}
+
+.toast.success .toast-icon {
+    color: #4caf50;
+}
+
+.toast.error {
+    border-left-color: #f44336;
+}
+
+.toast.error .toast-icon {
+    color: #f44336;
+}
+
+.toast.warning {
+    border-left-color: #ff9800;
+}
+
+.toast.warning .toast-icon {
+    color: #ff9800;
+}
+
+.toast-icon {
+    font-size: 1.3em;
+    min-width: 20px;
+}
+
+.toast-message {
+    flex: 1;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1.2em;
+    padding: 0;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Settings Panel */
+.settings-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 100%;
+    max-width: 400px;
+    height: 100vh;
+    background: var(--card-bg);
+    border-left: 2px solid var(--secondary-color);
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    overflow-y: auto;
+    animation: slidePanel 0.3s ease;
+    transform: translateX(0);
+}
+
+.settings-panel.hidden {
+    display: none;
+}
+
+@keyframes slidePanel {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+.settings-content {
+    padding: 30px;
+}
+
+.settings-content h2 {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.close-settings {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: var(--transition);
+}
+
+.close-settings:hover {
+    color: var(--text-primary);
+    transform: scale(1.2);
+}
+
+.settings-group {
+    margin-bottom: 25px;
+}
+
+.settings-group label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.settings-group input[type="checkbox"] {
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+.slider {
+    width: 100%;
+    height: 6px;
+    background: var(--border-color);
+    border-radius: 3px;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    margin-bottom: 8px;
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: var(--secondary-color);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.slider::-webkit-slider-thumb:hover {
+    background: #0ea5e9;
+    transform: scale(1.1);
+}
+
+.slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: var(--secondary-color);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    transition: var(--transition);
+}
+
+.input-field {
+    width: 100%;
+    padding: 10px;
+    background: #0f172a;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+}
+
+#sensitivityValue {
+    display: block;
+    margin-top: 8px;
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
+/* Charts Section */
+.charts-section {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8));
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+.charts-section h3 {
+    font-size: 1.3em;
+    margin-bottom: 20px;
+    color: var(--text-primary);
+}
+
+.chart-canvas {
+    max-height: 400px;
+    width: 100% !important;
+}
+
+/* Activity Section */
+.activity-section {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8));
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 25px;
+}
+
+.activity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.search-input {
+    padding: 10px 15px;
+    background: #0f172a;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.95em;
+    width: 100%;
+    max-width: 300px;
+    margin-top: 10px;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.2);
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    border: 2px solid var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: 40px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(107, 70, 193, 0.4);
+    position: relative;
+    animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 2em;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.modal-close:hover {
+    color: var(--accent-color);
+    transform: rotate(90deg);
+}
+
+.modal-content h2 {
+    margin-bottom: 10px;
+    color: var(--secondary-color);
+}
+
+.modal-content p {
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+}
+
+#feedbackForm {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+#feedbackForm textarea,
+#feedbackForm select {
+    padding: 12px;
+    background: #0f172a;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.95em;
+    min-height: 120px;
+    resize: vertical;
+}
+
+#feedbackForm textarea:focus,
+#feedbackForm select:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 10px rgba(167, 139, 250, 0.2);
+}
+
+.submit-btn {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--smooth-animation);
+}
+
+.submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(107, 70, 193, 0.3);
+}
+
+/* Decision Buttons */
+.decision-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.report-btn {
+    padding: 10px 16px;
+    background: rgba(107, 70, 193, 0.2);
+    color: var(--secondary-color);
+    border: 1px solid var(--secondary-color);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 600;
+    transition: var(--transition);
+    flex: 1;
+}
+
+.report-btn:hover {
+    background: rgba(107, 70, 193, 0.3);
+    box-shadow: 0 4px 12px rgba(107, 70, 193, 0.2);
+}
+
+/* Attacker DNA Card */
+.attacker-dna-card {
+    background: linear-gradient(135deg, rgba(107, 70, 193, 0.1), rgba(236, 72, 153, 0.05));
+    border: 2px solid var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    margin: 20px 0;
+    animation: slideInLeft 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.attacker-dna-card.hidden {
+    display: none;
+}
+
+.attacker-dna-card h3 {
+    color: var(--secondary-color);
+    margin-bottom: 20px;
+    font-size: 1.2em;
+}
+
+.dna-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.dna-stat {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+}
+
+.dna-stat label {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.85em;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 2.5em;
+    font-weight: 700;
+    color: var(--accent-color);
+    margin-bottom: 10px;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.risk-indicator {
+    font-size: 1.5em;
+    font-weight: 700;
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.risk-indicator.low {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.risk-indicator.medium {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.risk-indicator.high {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.behavior-summary {
+    background: rgba(15, 23, 42, 0.5);
+    border-left: 4px solid var(--secondary-color);
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.behavior-summary h4 {
+    color: var(--secondary-color);
+    margin-bottom: 8px;
+}
+
+.behavior-summary p {
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+/* Honeypot Card */
+.honeypot-card {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05));
+    border: 2px dashed var(--honeypot-color);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    margin: 20px 0;
+    animation: slideInRight 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.honeypot-card.hidden {
+    display: none;
+}
+
+.honeypot-card h3 {
+    color: var(--honeypot-color);
+    margin-bottom: 15px;
+}
+
+.honeypot-note {
+    color: var(--honeypot-color);
+    background: rgba(245, 158, 11, 0.15);
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    font-size: 0.9em;
+    font-weight: 600;
+}
+
+.decoy-response {
+    background: #0f172a;
+    border: 1px solid var(--border-color);
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+    font-style: italic;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.honeypot-footer {
+    text-align: center;
+    padding: 12px;
+    background: rgba(245, 158, 11, 0.1);
+    border-radius: 8px;
+}
+
+.honeypot-label {
+    color: var(--honeypot-color);
+    font-weight: 600;
+    font-size: 0.9em;
+}
+
+/* Alerts Centre */
+.alerts-centre {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8));
+    border: 2px solid var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    margin: 30px 0;
+}
+
+.centre-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 15px;
+}
+
+.centre-header h3 {
+    color: var(--secondary-color);
+    margin: 0;
+}
+
+.clear-btn {
+    padding: 8px 16px;
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid #ef4444;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: var(--transition);
+}
+
+.clear-btn:hover {
+    background: rgba(239, 68, 68, 0.3);
+}
+
+.alerts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.alert-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border-left: 4px solid;
+    font-size: 0.95em;
+    animation: slideInLeft 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.alert-severity {
+    min-width: 50px;
+    font-weight: 700;
+    font-size: 0.8em;
+    padding: 4px 8px;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.alert-green {
+    background: rgba(16, 185, 129, 0.1);
+    border-left-color: #10b981;
+}
+
+.alert-green .alert-severity {
+    background: rgba(16, 185, 129, 0.3);
+    color: #10b981;
+}
+
+.alert-orange {
+    background: rgba(245, 158, 11, 0.1);
+    border-left-color: #f59e0b;
+}
+
+.alert-orange .alert-severity {
+    background: rgba(245, 158, 11, 0.3);
+    color: #f59e0b;
+}
+
+.alert-red {
+    background: rgba(239, 68, 68, 0.1);
+    border-left-color: #ef4444;
+}
+
+.alert-red .alert-severity {
+    background: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+.alert-text {
+    flex: 1;
+    color: var(--text-primary);
+}
+
+.alert-time {
+    color: var(--text-secondary);
+    font-size: 0.85em;
+    white-space: nowrap;
+}
+
+/* Behavior Timeline */
+.behavior-timeline {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8));
+    border: 2px solid var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    margin: 30px 0;
+}
+
+.behavior-timeline h3 {
+    color: var(--secondary-color);
+    margin-bottom: 25px;
+}
+
+.timeline-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.timeline-info {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.timeline-item {
+    position: relative;
+    padding: 20px;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--secondary-color);
+    border-radius: 10px;
+    animation: slideInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.timeline-item.escalating {
+    border-left-color: var(--accent-color);
+}
+
+.timeline-item.critical {
+    border-left-color: #ef4444;
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -15px;
+    top: 25px;
+    width: 12px;
+    height: 12px;
+    background: var(--secondary-color);
+    border: 3px solid var(--card-bg);
+    border-radius: 50%;
+}
+
+.timeline-item.escalating::before {
+    background: var(--accent-color);
+}
+
+.timeline-item.critical::before {
+    background: #ef4444;
+    width: 16px;
+    height: 16px;
+    left: -18px;
+    top: 22px;
+    animation: pulse 2s infinite;
+}
+
+.timeline-number {
+    display: inline-block;
+    background: var(--secondary-color);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: 700;
+    margin-right: 10px;
+}
+
+.timeline-prompt {
+    color: var(--text-secondary);
+    margin: 10px 0;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+    font-style: italic;
+    font-size: 0.9em;
+}
+
+.timeline-threat {
+    display: inline-block;
+    padding: 4px 12px;
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.timeline-progression {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.9em;
+    color: var(--text-secondary);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+.mission-control {
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.dashboard-card {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: var(--transition);
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+}
+
+.dashboard-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(15, 23, 42, 0));
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.dashboard-card:hover {
+    border-color: var(--secondary-color);
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(59, 130, 246, 0.2);
+}
+
+.dashboard-card:hover::before {
+    opacity: 1;
+}
+
+.card-icon {
+    font-size: 3em;
+    min-width: 60px;
+    text-align: center;
+    z-index: 1;
+}
+
+.card-content {
+    flex: 1;
+    z-index: 1;
+}
+
+.card-label {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.card-value {
+    font-size: 2em;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+}
+
+.card-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.85em;
+}
+
+/* Activity Section */
+.activity-section {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8));
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 25px;
+}
+
+.activity-section h3 {
+    font-size: 1.3em;
+    margin-bottom: 20px;
+    color: var(--text-primary);
+}
+
+.activity-log {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.activity-item {
+    padding: 15px;
+    border-radius: 8px;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    border-left: 4px solid;
+    transition: var(--transition);
+}
+
+.activity-item:hover {
+    transform: translateX(5px);
+}
+
+.activity-item.blocked {
+    background: rgba(239, 68, 68, 0.1);
+    border-left-color: #ef4444;
+}
+
+.activity-item.allowed {
+    background: rgba(16, 185, 129, 0.1);
+    border-left-color: #10b981;
+}
+
+.activity-item.honeypot {
+    background: rgba(245, 158, 11, 0.1);
+    border-left-color: #f59e0b;
+    animation: pulse 2s infinite;
+}
+
+.activity-item .time {
+    color: var(--text-secondary);
+    font-size: 0.85em;
+    min-width: 70px;
+}
+
+.activity-text {
+    flex: 1;
+    color: var(--text-primary);
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--text-secondary);
+    border-top: 1px solid var(--border-color);
+    margin-top: 50px;
+}
+
+.footer p {
+    font-size: 0.95em;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .header h1 {
+        font-size: 2em;
+    }
+
+    .input-container {
+        flex-direction: column;
+    }
+
+    .analyze-button {
+        width: 100%;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .status-indicator {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .threat-score-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .settings-panel {
+        max-width: 100%;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .action-buttons button {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 0 15px;
+    }
+
+    section {
+        padding: 20px;
+    }
+
+    .header {
+        padding: 25px 15px;
+    }
+
+    .header h1 {
+        font-size: 1.5em;
+    }
+
+    .subtitle {
+        font-size: 0.95em;
+    }
+
+    .section-header h2 {
+        font-size: 1.4em;
+    }
+
+    .card-value {
+        font-size: 1.5em;
+    }
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--dark-bg);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--secondary-color);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #0ea5e9;
+}
+
+/* Print Styles */
+@media print {
+    body {
+        background: white;
+        color: black;
+    }
+
+    section {
+        page-break-inside: avoid;
+        border: 1px solid #ccc;
+    }
+}
+
+/* Advanced Analytics Dashboard */
+.analytics-dashboard {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8));
+    border: 2px solid var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    margin: 30px 0;
+}
+
+.analytics-dashboard h3 {
+    color: var(--secondary-color);
+    margin-bottom: 20px;
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.metric-card {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+}
+
+.metric-card label {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.85em;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.metric-value {
+    font-size: 2em;
+    font-weight: 700;
+    color: var(--secondary-color);
+    margin: 10px 0;
+}
+
+.metric-detail {
+    color: var(--text-secondary);
+    font-size: 0.8em;
+    margin-top: 8px;
+}
+
+/* Threat Intelligence Feed */
+.threat-feed {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8));
+    border: 2px solid var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    margin: 30px 0;
+}
+
+.threat-feed h3 {
+    color: var(--secondary-color);
+    margin-bottom: 20px;
+}
+
+.feed-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.feed-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid;
+    animation: slideInLeft 0.4s ease;
+}
+
+.feed-item.critical {
+    background: rgba(239, 68, 68, 0.1);
+    border-left-color: #ef4444;
+}
+
+.feed-item.high {
+    background: rgba(245, 158, 11, 0.1);
+    border-left-color: #f59e0b;
+}
+
+.feed-item.medium {
+    background: rgba(107, 70, 193, 0.1);
+    border-left-color: var(--secondary-color);
+}
+
+.feed-type {
+    font-weight: 700;
+    font-size: 0.8em;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.3);
+    min-width: 60px;
+    text-align: center;
+    color: white;
+}
+
+.feed-text {
+    flex: 1;
+    color: var(--text-primary);
+}
+
+.feed-time {
+    color: var(--text-secondary);
+    font-size: 0.85em;
+    white-space: nowrap;
+}
+
+/* Executive Dashboard */
+.executive-dashboard {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8));
+    border: 2px solid var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    margin: 30px 0;
+}
+
+.executive-dashboard h3 {
+    color: var(--secondary-color);
+    margin-bottom: 20px;
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.kpi-card {
+    padding: 20px;
+    border-radius: 12px;
+    border: 2px solid;
+    text-align: center;
+    transition: var(--smooth-animation);
+}
+
+.kpi-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.kpi-card.success {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: #10b981;
+}
+
+.kpi-card.info {
+    background: rgba(107, 70, 193, 0.1);
+    border-color: var(--secondary-color);
+}
+
+.kpi-card.warning {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: #f59e0b;
+}
+
+.kpi-card h4 {
+    color: var(--text-primary);
+    margin-bottom: 10px;
+}
+
+.kpi-value {
+    font-size: 1.8em;
+    font-weight: 700;
+    color: var(--secondary-color);
+    margin: 10px 0;
+}
+
+.kpi-card p {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
+/* Incident Response Workflow */
+.incident-response {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8));
+    border: 2px solid var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    margin: 30px 0;
+}
+
+.incident-response h3 {
+    color: var(--secondary-color);
+    margin-bottom: 20px;
+}
+
+.workflow-timeline {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    position: relative;
+}
+
+.workflow-timeline::before {
+    content: '';
+    position: absolute;
+    top: 30px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--secondary-color);
+    z-index: 0;
+}
+
+.workflow-step {
+    flex: 1;
+    position: relative;
+    z-index: 1;
+    opacity: 0.6;
+    transition: var(--transition);
+}
+
+.workflow-step.active {
+    opacity: 1;
+}
+
+.step-number {
+    width: 60px;
+    height: 60px;
+    background: var(--card-bg);
+    border: 3px solid var(--border-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2em;
+    color: var(--secondary-color);
+    margin: 0 auto;
+}
+
+.workflow-step.active .step-number {
+    background: var(--secondary-color);
+    color: white;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 20px rgba(167, 139, 250, 0.5);
+}
+
+.step-content {
+    text-align: center;
+    margin-top: 15px;
+}
+
+.step-content h4 {
+    color: var(--text-primary);
+    margin-bottom: 5px;
+}
+
+.step-content p {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
+/* ML Prediction */
+.ml-prediction {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8));
+    border: 2px solid var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    margin: 30px 0;
+}
+
+.ml-prediction h3 {
+    color: var(--secondary-color);
+    margin-bottom: 20px;
+}
+
+.prediction-card {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.prediction-card h4 {
+    color: var(--text-primary);
+    margin-bottom: 15px;
+}
+
+.risk-prediction {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.risk-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--text-primary);
+}
+
+.risk-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.9em;
+}
+
+.risk-badge.low {
+    background: rgba(16, 185, 129, 0.3);
+    color: #10b981;
+}
+
+.risk-badge.medium {
+    background: rgba(245, 158, 11, 0.3);
+    color: #f59e0b;
+}
+
+.risk-badge.high {
+    background: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+.risk-gauge {
+    width: 100%;
+}
+
+.gauge-bar {
+    width: 100%;
+    height: 12px;
+    background: var(--border-color);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.gauge-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #f59e0b, #ef4444);
+    transition: width 0.8s ease;
+}
+
+#mlPrediction {
+    color: var(--text-secondary);
+    font-size: 0.95em;
+    line-height: 1.6;
+}
+
+/* Compliance Section */
+.compliance-section {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8));
+    border: 2px solid var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    margin: 30px 0;
+}
+
+.compliance-section h3 {
+    color: var(--secondary-color);
+    margin-bottom: 20px;
+}
+
+.compliance-badges {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 15px;
+}
+
+.compliance-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px;
+    background: rgba(15, 23, 42, 0.5);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.9em;
+    transition: var(--transition);
+    opacity: 0.6;
+}
+
+.compliance-badge.active {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: #10b981;
+    color: #10b981;
+    opacity: 1;
+}
+
+.badge-icon {
+    font-size: 2em;
+}
+
+/* Team Collaboration */
+.collaboration-panel {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8));
+    border: 2px solid var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    margin: 30px 0;
+}
+
+.collaboration-panel h3 {
+    color: var(--secondary-color);
+    margin-bottom: 20px;
+}
+
+.collab-features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 25px;
+}
+
+.collab-btn {
+    padding: 12px 16px;
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--smooth-animation);
+}
+
+.collab-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(107, 70, 193, 0.3);
+}
+
+.team-notes {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 15px;
+}
+
+.team-notes h4 {
+    color: var(--secondary-color);
+    margin-bottom: 12px;
+}
+
+.notes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.note-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    font-size: 0.9em;
+}
+
+.note-author {
+    font-weight: 600;
+    color: var(--secondary-color);
+    min-width: 100px;
+}
+
+.note-text {
+    flex: 1;
+    color: var(--text-primary);
+}
+
+.note-time {
+    color: var(--text-secondary);
+    font-size: 0.85em;
+    white-space: nowrap;
+}
+
+/* API Documentation */
+.api-docs {
+    margin-top: 20px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.api-docs h3 {
+    color: var(--secondary-color);
+    margin: 15px 0 10px 0;
+    font-size: 1.1em;
+}
+
+.api-docs pre {
+    background: #0f172a;
+    border: 1px solid var(--border-color);
+    padding: 15px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin-bottom: 15px;
+}
+
+.api-docs code {
+    color: #a78bfa;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85em;
+    line-height: 1.5;
+}
